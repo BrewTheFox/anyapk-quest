@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -32,9 +33,10 @@
             android:id="@+id/refreshButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/btn_refresh"
+            android:layout_marginBottom="16dp"
             android:minWidth="200dp"
-            android:layout_marginBottom="16dp" />
+            android:text="@string/btn_refresh" />
+
     </LinearLayout>
 
     <Button
@@ -53,5 +55,44 @@
         android:minWidth="200dp"
         android:layout_marginTop="16dp"
         android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/portLayout"
+        android:layout_width="match_parent"
+        android:layout_height="154dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="158dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/codeInput"
+                android:layout_width="match_parent"
+                android:layout_height="76dp"
+                android:hint="CODE PORT"
+                android:inputType="text" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/checkButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:backgroundTint="#FFFFFF"
+                    android:backgroundTintMode="src_in"
+                    android:text="check"
+                    android:visibility="visible"
+                    tools:visibility="visible" />
+
+            </LinearLayout>
+
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
 
 </LinearLayout>

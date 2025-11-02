@@ -6,8 +6,10 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.content.ComponentName
 import android.provider.Settings
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -26,6 +29,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var refreshButton: Button
     private lateinit var testConnectionButton: Button
     private lateinit var selectApkButton: Button
+    private lateinit var portLayout: LinearLayout
+    private lateinit var checkButton: Button
+    private lateinit var codeInput: TextInputEditText
 
     private val selectApkLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
@@ -47,6 +53,13 @@ class MainActivity : AppCompatActivity() {
         refreshButton = findViewById(R.id.refreshButton)
         testConnectionButton = findViewById(R.id.testConnectionButton)
         selectApkButton = findViewById(R.id.selectApkButton)
+        portLayout = findViewById(R.id.portLayout)
+        checkButton = findViewById(R.id.checkButton)
+        codeInput = findViewById(R.id.codeInput)
+
+        checkButton.setOnClickListener {
+            checkCode()
+        }
 
         refreshButton.setOnClickListener {
             checkStatus()
@@ -66,6 +79,48 @@ class MainActivity : AppCompatActivity() {
         checkStatus()
     }
 
+    private fun checkCode(){
+        val input = codeInput.text.toString()
+        if (input.isEmpty()) {
+            Toast.makeText(this, "Please enter code and port", Toast.LENGTH_SHORT).show()
+            return
+        }
+        // Parse input format: "CODE PORT" (space-separated)
+        val parts = input.trim().split("\\s+".toRegex())
+        if (parts.size != 2) {
+            Toast.makeText(
+                this,
+                "Invalid format. Use: CODE PORT (e.g., 123456 37829)",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+        val code = parts[0]
+        val portInt = parts[1].toIntOrNull()
+        if (portInt == null || portInt <= 0) {
+            Toast.makeText(this, "Invalid port number", Toast.LENGTH_SHORT).show()
+            return
+        }
+        lifecycleScope.launch {
+            val result = AdbInstaller.pair(this@MainActivity, code, portInt)
+            result.onSuccess {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Pairing successful!",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+
+            result.onFailure { error ->
+                Toast.makeText(
+                    this@MainActivity,
+                    "Pairing failed: ${error.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            checkStatus()
+        }
+    }
     private fun checkStatus() {
         lifecycleScope.launch {
             val status = withContext(Dispatchers.IO) {
@@ -105,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         testConnectionButton.visibility = Button.GONE
         refreshButton.visibility = Button.GONE
         selectApkButton.visibility = Button.VISIBLE
+        portLayout.visibility = LinearLayout.GONE
     }
 
     private fun showSetupChecklist(devModeEnabled: Boolean, notificationPermission: Boolean) {
@@ -118,7 +174,7 @@ class MainActivity : AppCompatActivity() {
             // Step 1: Developer Options
             append("$step1 Step 1: Enable Developer Options\n")
             if (!devModeEnabled) {
-                append("   • Open Settings → About Phone\n")
+                append("   • Open Settings → Select Settings → Open Settings → About Headset\n")
                 append("   • Tap \"Build Number\" 7 times\n\n")
             } else {
                 append("   Complete!\n\n")
@@ -144,6 +200,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         statusText.text = message
+        portLayout.visibility = LinearLayout.VISIBLE
 
         // Configure button based on current step
         when {
@@ -166,9 +223,12 @@ class MainActivity : AppCompatActivity() {
                 actionButton.isEnabled = true
                 actionButton.setOnClickListener {
                     try {
-                        startActivity(Intent(Settings.ACTION_SETTINGS))
+                        val intent = Intent()
+                        val componentName = ComponentName("com.android.settings", "com.android.settings.applications.ManageApplications")
+                        intent.component = componentName
+                        startActivity(intent)
                     } catch (e: Exception) {
-                        Toast.makeText(this, "Please open Settings manually", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, e.message, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -192,13 +252,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPairingDialog() {
-        // Start pairing input service with RemoteInput notification
-        val serviceIntent = Intent(this, PairingInputService::class.java)
-        startService(serviceIntent)
-
         // Try to open Developer Options directly
         try {
-            val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+            val intent = Intent()
+            val componentName = ComponentName("com.android.settings", "com.android.settings.applications.ManageApplications")
+            intent.component = componentName
             startActivity(intent)
         } catch (e: Exception) {
             // If that fails, just open main settings
